@@ -364,8 +364,9 @@ app.get('/api/listings', (req, res) => {
 app.post('/api/listings', authenticate, (req, res) => {
   const { itemName, itemLocation, itemPrice, itemImage } = req.body;
   
-  if (!itemName || !itemLocation || !itemPrice) {
-    return res.status(400).json({ error: 'Item name, location and price are required' });
+  // Enhanced validation
+  if (!itemName || !itemLocation || !itemPrice || isNaN(parseFloat(itemPrice))) {
+    return res.status(400).json({ error: 'Valid item name, location and price are required' });
   }
 
   let imagePath = null;
@@ -373,12 +374,22 @@ app.post('/api/listings', authenticate, (req, res) => {
     imagePath = saveImage(itemImage, `listing-${Date.now()}`);
   }
 
+  // Convert price to number to ensure proper storage
+  const price = parseFloat(itemPrice);
+
   db.run(
     'INSERT INTO listings (itemName, itemLocation, itemPrice, itemImage) VALUES (?, ?, ?, ?)',
-    [itemName, itemLocation, itemPrice, imagePath],
+    [itemName, itemLocation, price, imagePath],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID });
+      res.json({ 
+        id: this.lastID,
+        itemName,
+        itemLocation,
+        itemPrice: price,
+        itemImage: imagePath,
+        date: new Date().toISOString()
+      });
     }
   );
 });
