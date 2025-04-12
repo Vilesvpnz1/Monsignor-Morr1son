@@ -12,7 +12,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY || 'a3f8d9e72c1b06f5e4d9876543210abcdef0123456789fedcba9876543210';
-const ADMIN_KEY = process.env.ADMIN_KEY || 'Panelkey1'; // Keeping your original admin key
+const ADMIN_KEY = process.env.ADMIN_KEY || 'Panelkey1';
 
 // Enhanced CORS configuration
 app.use(cors({
@@ -29,9 +29,7 @@ app.use(cors({
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ======================
-// UTILITY FUNCTIONS
-// ======================
+// Utility function to save images
 const saveImage = (base64Data, userId) => {
   const matches = base64Data.match(/^data:image\/([A-Za-z-+/]+);base64,(.+)$/);
   if (!matches || matches.length !== 3) return null;
@@ -44,32 +42,25 @@ const saveImage = (base64Data, userId) => {
   return `/uploads/${filename}`;
 };
 
-// ======================
-// MIDDLEWARE
-// ======================
+// Authentication middleware
 const authenticate = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.sendStatus(401);
+  if (!token) return res.status(401).json({ error: 'Authorization token required' });
 
   jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) return res.sendStatus(403);
+    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
     req.user = user;
     next();
   });
 };
 
-// ======================
-// ROUTES
-// ======================
-
-// Serve frontend
+// Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Health check endpoint
 app.get('/api/status', (req, res) => {
   res.json({ 
     status: 'Monsignor Morrison Backend is running! 🚀',
@@ -77,7 +68,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// User registration
+// User endpoints
 app.post('/api/signup', async (req, res) => {
   const { username, password, avatar } = req.body;
 
@@ -86,7 +77,6 @@ app.post('/api/signup', async (req, res) => {
   }
 
   try {
-    // Check if username exists
     const userExists = await new Promise((resolve) => {
       db.get('SELECT id FROM users WHERE username = ?', [username], (err, row) => {
         resolve(!!row);
@@ -97,16 +87,12 @@ app.post('/api/signup', async (req, res) => {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
-    // Process avatar
     let avatarPath = null;
     if (avatar && avatar.startsWith('data:image')) {
       avatarPath = saveImage(avatar, username);
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
     const userId = await new Promise((resolve, reject) => {
       db.run(
         'INSERT INTO users (username, password, avatar) VALUES (?, ?, ?)',
@@ -118,14 +104,12 @@ app.post('/api/signup', async (req, res) => {
       );
     });
 
-    // Generate JWT token
     const token = jwt.sign(
       { id: userId, username: username },
       SECRET_KEY,
       { expiresIn: '1h' }
     );
 
-    // Return user data
     const user = await new Promise((resolve) => {
       db.get(
         'SELECT id, username, avatar FROM users WHERE id = ?',
@@ -141,7 +125,6 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// User login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -150,7 +133,6 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
-    // Find active user
     const user = await new Promise((resolve) => {
       db.get(
         'SELECT * FROM users WHERE username = ? AND banned = 0 AND disabled = 0',
@@ -163,20 +145,17 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Verify password
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { id: user.id, username: user.username },
       SECRET_KEY,
       { expiresIn: '1h' }
     );
 
-    // Sanitize user data
     const userData = {
       id: user.id,
       username: user.username,
@@ -190,34 +169,26 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Profile update
 app.post('/api/update-profile', authenticate, async (req, res) => {
   const { currentUsername, newUsername, currentPassword, newPassword, newAvatar } = req.body;
   
   try {
-    // Verify current password if changing sensitive data
     if (newUsername || newPassword) {
       const user = await new Promise((resolve) => {
         db.get('SELECT * FROM users WHERE username = ?', [currentUsername], (err, row) => resolve(row));
       });
       
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
+      if (!user) return res.status(404).json({ error: 'User not found' });
       
       const passwordMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!passwordMatch) {
-        return res.status(401).json({ error: 'Current password is incorrect' });
-      }
+      if (!passwordMatch) return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    // Process new avatar if provided
     let avatarPath = null;
     if (newAvatar && newAvatar.startsWith('data:image')) {
       avatarPath = saveImage(newAvatar, newUsername || currentUsername);
     }
 
-    // Update user data
     let updateQuery = 'UPDATE users SET ';
     const updateParams = [];
     
@@ -237,7 +208,6 @@ app.post('/api/update-profile', authenticate, async (req, res) => {
       updateParams.push(avatarPath);
     }
     
-    // Remove trailing comma and space
     updateQuery = updateQuery.slice(0, -2);
     updateQuery += ' WHERE username = ?';
     updateParams.push(currentUsername);
@@ -249,7 +219,6 @@ app.post('/api/update-profile', authenticate, async (req, res) => {
       });
     });
 
-    // Get updated user data
     const updatedUser = await new Promise((resolve) => {
       db.get(
         'SELECT id, username, avatar FROM users WHERE username = ?',
@@ -258,7 +227,6 @@ app.post('/api/update-profile', authenticate, async (req, res) => {
       );
     });
 
-    // Generate new token if username changed
     let token;
     if (newUsername) {
       token = jwt.sign(
@@ -279,16 +247,11 @@ app.post('/api/update-profile', authenticate, async (req, res) => {
   }
 });
 
-// Token verification endpoint
 app.get('/api/verify-token', authenticate, (req, res) => {
   res.json({ valid: true, user: req.user });
 });
 
-// ======================
-// ADMIN ENDPOINTS
-// ======================
-
-// Admin verification endpoint
+// Admin endpoints
 app.post('/api/admin/verify', (req, res) => {
   const { key } = req.body;
   
@@ -299,7 +262,6 @@ app.post('/api/admin/verify', (req, res) => {
   }
 });
 
-// Get all users (admin only)
 app.get('/api/admin/users', authenticate, (req, res) => {
   db.all('SELECT id, username, avatar, banned, disabled FROM users', [], (err, users) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -307,7 +269,6 @@ app.get('/api/admin/users', authenticate, (req, res) => {
   });
 });
 
-// Ban a user
 app.post('/api/admin/ban', authenticate, (req, res) => {
   const { username } = req.body;
   db.run(
@@ -320,7 +281,6 @@ app.post('/api/admin/ban', authenticate, (req, res) => {
   );
 });
 
-// Unban a user
 app.post('/api/admin/unban', authenticate, (req, res) => {
   const { username } = req.body;
   db.run(
@@ -333,7 +293,6 @@ app.post('/api/admin/unban', authenticate, (req, res) => {
   );
 });
 
-// Disable a user
 app.post('/api/admin/disable', authenticate, (req, res) => {
   const { username } = req.body;
   db.run(
@@ -346,7 +305,6 @@ app.post('/api/admin/disable', authenticate, (req, res) => {
   );
 });
 
-// Enable a user
 app.post('/api/admin/enable', authenticate, (req, res) => {
   const { username } = req.body;
   db.run(
@@ -359,9 +317,7 @@ app.post('/api/admin/enable', authenticate, (req, res) => {
   );
 });
 
-// ======================
-// NEWS ENDPOINTS
-// ======================
+// News endpoints
 app.get('/api/news', (req, res) => {
   db.all('SELECT * FROM news ORDER BY date DESC', [], (err, news) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -397,9 +353,7 @@ app.delete('/api/news/:id', authenticate, (req, res) => {
   );
 });
 
-// ======================
-// LISTINGS ENDPOINTS
-// ======================
+// Listings endpoints
 app.get('/api/listings', (req, res) => {
   db.all('SELECT * FROM listings ORDER BY date DESC', [], (err, listings) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -448,9 +402,7 @@ app.delete('/api/listings/:id', authenticate, (req, res) => {
   );
 });
 
-// ======================
-// CHAT ENDPOINTS
-// ======================
+// Chat endpoints
 app.get('/api/chat', (req, res) => {
   db.all('SELECT * FROM chat_messages ORDER BY timestamp DESC LIMIT 50', [], (err, messages) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -460,12 +412,29 @@ app.get('/api/chat', (req, res) => {
 
 app.post('/api/chat', authenticate, (req, res) => {
   const { username, message } = req.body;
+  
+  if (username !== req.user.username) {
+    return res.status(403).json({ error: 'Username does not match authenticated user' });
+  }
+
+  if (!message || message.trim() === '') {
+    return res.status(400).json({ error: 'Message cannot be empty' });
+  }
+
   db.run(
     'INSERT INTO chat_messages (username, message) VALUES (?, ?)',
-    [username, message],
+    [username, message.trim()],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID });
+      
+      db.get(
+        'SELECT * FROM chat_messages WHERE id = ?',
+        [this.lastID],
+        (err, row) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json(row);
+        }
+      );
     }
   );
 });
@@ -482,16 +451,13 @@ app.delete('/api/chat/:id', authenticate, (req, res) => {
   );
 });
 
-// ======================
-// CATCH-ALL ROUTE (for frontend routing)
-// ======================
+// Catch-all route
 app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server
 app.listen(PORT, () => {
-  // Create uploads directory if needed
   const uploadDir = path.join(__dirname, 'public/uploads');
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
