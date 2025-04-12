@@ -10,12 +10,22 @@ const path = require('path');
 
 // Initialize Express app
 const app = express();
-const PORT = 3000;
-const SECRET_KEY = 'a3f8d9e72c1b06f5e4d9876543210abcdef0123456789fedcba9876543210'; // Change in production!
-const ADMIN_KEY = 'Panelkey1'; // Replace with your actual admin key!
+const PORT = process.env.PORT || 3000; // Flexible port for Render
+const SECRET_KEY = process.env.SECRET_KEY || 'a3f8d9e72c1b06f5e4d9876543210abcdef0123456789fedcba9876543210';
+const ADMIN_KEY = process.env.ADMIN_KEY || 'Panelkey1';
+
+// Enhanced CORS configuration
+app.use(cors({
+  origin: [
+    'https://monsignor-morr1son.onrender.com', // Your Render frontend URL
+    'http://localhost:3000' // For local development
+  ],
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
 // Middleware setup
-app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -61,7 +71,10 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/api/status', (req, res) => {
-  res.send('Monsignor Morrison Backend is running! 🚀');
+  res.json({ 
+    status: 'Monsignor Morrison Backend is running! 🚀',
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // User registration
@@ -294,7 +307,7 @@ app.listen(PORT, () => {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
 
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
   console.log('Available endpoints:');
   console.log('- POST /api/signup');
   console.log('- POST /api/login');
