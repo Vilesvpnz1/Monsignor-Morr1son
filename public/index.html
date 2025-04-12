@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monsignor Morrison News</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+      min-height: 100vh;
+    }
+    @keyframes gradient {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+
+    .popup-box {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      z-index: 50;
+      background: #111827;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 768px) {
+      .popup-box {
+        width: 90% !important;
+        left: 5%;
+        right: 5%;
+        top: 20px;
+        max-height: 80vh;
+      }
+      
+      #authPanel {
+        height: auto;
+        padding: 1rem;
+      }
+      
+      #loginTab, #signupTab {
+        padding: 0.5rem;
+      }
+    }
+
+    #marketplaceBox, #listingsBox, #chatBox {
+      width: 800px;
+      height: 500px;
+    }
+
+    #aboutBox, #profileSettingsBox, #creditsBox {
+      width: 400px;
+      height: auto;
+    }
+
+    #adminSection {
+      position: fixed;
+      top: 100px;
+      left: 20px;
+      z-index: 50;
+      background: #111827;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      max-width: 80rem;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #adminKeyModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 100;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #adminKeyForm {
+      background: #111827;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      width: 400px;
+      max-width: 90%;
+    }
+
+    @media (max-width: 768px) {
+      #adminSection {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+        top: 20px;
+      }
+    }
+
+    #listingsContainer, #chatMessages {
+      height: calc(100% - 60px);
+      overflow-y: auto;
+    }
+
+    .file-preview img {
+      max-height: 150px;
+      max-width: 100%;
+      object-fit: contain;
+      margin-top: 0.5rem;
+      border-radius: 0.25rem;
+    }
+
+    .profile-image {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-left: 10px;
+      border: 2px solid white;
+      cursor: pointer;
+    }
+
+    .auth-buttons {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #accountsList {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .account-item {
+      padding: 0.5rem;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+    }
+
+    .account-item:last-child {
+      border-bottom: none;
+    }
+
+    .account-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .banned-account {
+      color: #ef4444;
+      text-decoration: line-through;
+    }
+
+    .disabled-account {
+      color: #d1d5db;
+      opacity: 0.6;
+    }
+
+    .header-buttons {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        padding: 1rem;
+      }
+
+      .header-buttons {
+        margin-left: 0;
+        margin-top: 0.5rem;
+      }
+
+      nav {
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 1rem;
+      }
+
+      nav button {
+        margin-bottom: 0.5rem;
+      }
+
+      #adminSection {
+        width: 95%;
+        margin: 1rem auto;
+        padding: 1rem;
+      }
+
+      #marketplaceBox, #listingsBox, #chatBox {
+        width: 90%;
+        height: 70vh;
+      }
+
+      #aboutBox, #profileSettingsBox, #creditsBox {
+        width: 90%;
+      }
+
+      #newsFeed {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body class="text-white font-sans">
+  <header class="flex justify-between items-center p-6 bg-gray-900 shadow-md">
+    <div class="flex items-center">
+      <h1 class="text-2xl font-bold">Monsignor Morrison</h1>
+      <div class="header-buttons">
+        <button id="adminButton" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Admin Panel</button>
+        <img id="profileImage" class="profile-image hidden" src="" alt="Profile" onclick="toggleProfileSettings()">
+      </div>
+    </div>
+    <nav class="flex items-center space-x-4">
+      <div id="authButtons" class="auth-buttons">
+        <button id="authButton" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">Login / Signup</button>
+        <button id="logoutButton" onclick="logout()" class="bg-red-700 hover:bg-red-800 px-4 py-2 rounded hidden">Logout</button>
+      </div>
+      <button id="aboutButton" class="bg-purple-700 hover:bg-purple-800 px-4 py-2 rounded">About</button>
+      <button id="creditsButton" class="bg-indigo-700 hover:bg-indigo-800 px-4 py-2 rounded">Credits</button>
+      <button id="marketplaceButton" class="bg-yellow-700 hover:bg-yellow-800 px-4 py-2 rounded">Marketplace</button>
+      <button id="listingsButton" class="bg-yellow-700 hover:bg-yellow-800 px-4 py-2 rounded">Listings</button>
+      <button id="chatButton" class="bg-red-700 hover:bg-red-800 px-4 py-2 rounded">Global Chat</button>
+    </nav>
+  </header>
+
+  <main id="newsFeed" class="max-w-6xl mx-auto p-6 mt-4 space-y-6">
+    <!-- News posts appear here -->
+  </main>
+
+  <!-- Admin Key Modal -->
+  <div id="adminKeyModal">
+    <div id="adminKeyForm">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">Admin Access</h2>
+        <button onclick="closeAdminKeyModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      </div>
+      <p class="mb-4">Enter the admin key to access the panel:</p>
+      <input id="adminKeyInput" type="password" placeholder="Enter admin key" class="w-full p-2 mb-4 bg-gray-700 rounded">
+      <button onclick="verifyAdminKey()" class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Submit</button>
+      <p id="adminKeyError" class="text-red-500 mt-2 hidden">Invalid key! Please try again.</p>
+    </div>
+  </div>
+
+  <!-- Admin Panel -->
+  <section id="adminSection" class="hidden bg-gray-900 rounded-xl shadow-lg">
+    <div class="flex justify-between items-center">
+      <h2 class="text-3xl font-bold mb-6">Admin Panel</h2>
+      <button onclick="toggleAdminPanel()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-gray-800 p-4 rounded">
+        <h3 class="text-xl font-semibold mb-2">Post News</h3>
+        <input id="newsTitle" type="text" placeholder="News Title" class="w-full p-2 mb-2 bg-gray-700 rounded" />
+        <textarea id="newsContent" placeholder="News Content" class="w-full p-2 mb-2 bg-gray-700 rounded"></textarea>
+        <button onclick="postNews()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Post</button>
+      </div>
+
+      <div class="bg-gray-800 p-4 rounded">
+        <h3 class="text-xl font-semibold mb-2">Delete News</h3>
+        <select id="newsToDelete" class="w-full p-2 mb-2 bg-gray-700 rounded">
+          <option value="">Select news to delete</option>
+        </select>
+        <button onclick="deleteNews()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">Delete</button>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-gray-800 p-4 rounded">
+      <h3 class="text-xl font-semibold mb-2">Account Management</h3>
+      <div class="mb-4">
+        <h4 class="text-lg font-medium mb-2">All Accounts</h4>
+        <div id="accountsList"></div>
+      </div>
+      <input id="banUsername" type="text" placeholder="Username to Ban" class="w-full p-2 mb-2 bg-gray-700 rounded" />
+      <button onclick="banAccount()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">Ban Account</button>
+      <input id="unbanUsername" type="text" placeholder="Username to Unban" class="w-full p-2 mt-2 mb-2 bg-gray-700 rounded" />
+      <button onclick="unbanAccount()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">Unban Account</button>
+      <input id="disableUsername" type="text" placeholder="Username to Disable" class="w-full p-2 mt-2 mb-2 bg-gray-700 rounded" />
+      <button onclick="disableAccount()" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">Disable Account</button>
+      <input id="enableUsername" type="text" placeholder="Username to Enable" class="w-full p-2 mt-2 mb-2 bg-gray-700 rounded" />
+      <button onclick="enableAccount()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Enable Account</button>
+      <input id="deleteMessageId" type="text" placeholder="Message ID to Delete" class="w-full p-2 mt-2 mb-2 bg-gray-700 rounded" />
+      <button onclick="deleteMessage()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">Delete Message</button>
+      
+      <button onclick="clearAllListings()" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 mt-4 rounded">Clear All Listings</button>
+      <div class="mt-2">
+        <input id="listingIdToDelete" type="text" placeholder="Listing ID to Delete" class="w-full p-2 mb-2 bg-gray-700 rounded" />
+        <button onclick="clearSpecificListing()" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">Clear Specific Listing</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Auth Panel -->
+  <div id="authPanel" class="hidden popup-box border border-green-500">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Login / Signup</h3>
+      <button onclick="closeAllPopups()" class="text-green-400 hover:text-green-600 text-2xl">&times;</button>
+    </div>
+    <div class="space-y-4">
+      <div id="loginTab">
+        <input id="loginUsername" type="text" placeholder="Username" class="w-full p-2 bg-gray-700 rounded">
+        <input id="loginPassword" type="password" placeholder="Password" class="w-full p-2 bg-gray-700 rounded mt-2">
+        <button onclick="login()" class="w-full bg-green-600 hover:bg-green-700 p-2 rounded mt-2">Login</button>
+        <p class="text-center mt-2 text-sm">Don't have an account? <a href="#" onclick="showSignup()" class="text-blue-400 hover:underline">Sign up</a></p>
+      </div>
+      <div id="signupTab" class="hidden">
+        <input id="signupUsername" type="text" placeholder="Username" class="w-full p-2 bg-gray-700 rounded">
+        <input id="signupPassword" type="password" placeholder="Password" class="w-full p-2 bg-gray-700 rounded mt-2">
+        <input id="signupAvatar" type="file" accept="image/*" class="w-full p-2 bg-gray-700 rounded mt-2">
+        <button onclick="signup()" class="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded mt-2">Sign Up</button>
+        <p class="text-center mt-2 text-sm">Already have an account? <a href="#" onclick="showLogin()" class="text-green-400 hover:underline">Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Settings Box -->
+  <div id="profileSettingsBox" class="hidden popup-box border border-blue-500">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Profile Settings</h3>
+      <button onclick="closeAllPopups()" class="text-blue-400 hover:text-blue-600 text-2xl">&times;</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Profile Picture</label>
+        <div class="flex items-center">
+          <img id="currentProfileImage" src="" class="w-16 h-16 rounded-full mr-4">
+          <input id="newProfileImage" type="file" accept="image/*" class="w-full p-2 bg-gray-700 rounded">
+        </div>
+      </div>
+      <div>
+        <label for="newUsername" class="block text-sm font-medium mb-1">New Username</label>
+        <input id="newUsername" type="text" placeholder="New username" class="w-full p-2 bg-gray-700 rounded">
+      </div>
+      <div>
+        <label for="currentPassword" class="block text-sm font-medium mb-1">Current Password</label>
+        <input id="currentPassword" type="password" placeholder="Current password" class="w-full p-2 bg-gray-700 rounded">
+      </div>
+      <div>
+        <label for="newPassword" class="block text-sm font-medium mb-1">New Password</label>
+        <input id="newPassword" type="password" placeholder="New password" class="w-full p-2 bg-gray-700 rounded">
+      </div>
+      <button onclick="updateProfile()" class="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded">Update Profile</button>
+    </div>
+  </div>
+
+  <!-- About Box -->
+  <div id="aboutBox" class="hidden popup-box border border-purple-500">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">About</h3>
+      <button onclick="closeAllPopups()" class="text-purple-400 hover:text-purple-600 text-2xl">&times;</button>
+    </div>
+    <p class="text-gray-300">Community platform for sharing news, chatting, and marketplace.</p>
+  </div>
+
+  <!-- Credits Box -->
+  <div id="creditsBox" class="hidden popup-box border border-indigo-500">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Credits</h3>
+      <button onclick="closeAllPopups()" class="text-indigo-400 hover:text-indigo-600 text-2xl">&times;</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <h4 class="text-lg font-semibold">Development Team</h4>
+        <p class="text-gray-300">Joshua Liju - Head Developer</p>
+      </div>
+      <div>
+        <h4 class="text-lg font-semibold">Testing Team</h4>
+        <ul class="text-gray-300 list-disc list-inside">
+          <li>Clark Bannerman</li>
+          <li>Brandon Mcrae</li>
+          <li>Nathan Dos Reis</li>
+          <li>Xian Kurante</li>
+          <li>Josam Dumangeng</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Listings Box -->
+  <div id="listingsBox" class="hidden popup-box border border-yellow-400">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="text-xl font-bold">Listings</h3>
+      <button onclick="closeAllPopups()" class="text-yellow-400 hover:text-yellow-600 text-2xl">&times;</button>
+    </div>
+    <div id="listingsContainer" class="overflow-auto"></div>
+  </div>
+
+  <!-- Morrison Marketplace -->
+  <div id="marketplaceBox" class="hidden popup-box border border-yellow-400">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="text-xl font-bold">Morrison Marketplace</h3>
+      <button onclick="closeAllPopups()" class="text-yellow-400 hover:text-yellow-600 text-2xl">&times;</button>
+    </div>
+    <form id="marketplaceForm" onsubmit="event.preventDefault(); addListing();">
+      <input id="itemName" type="text" placeholder="Item Name" class="w-full p-2 mb-2 bg-gray-700 rounded" required />
+      <input id="itemLocation" type="text" placeholder="Item Location" class="w-full p-2 mb-2 bg-gray-700 rounded" required />
+      <input id="itemPrice" type="number" placeholder="Item Price" min="0" step="0.01" class="w-full p-2 mb-2 bg-gray-700 rounded" required />
+      <input id="itemFile" type="file" class="w-full p-2 mb-2 bg-gray-700 rounded" />
+      <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded w-full">Add Listing</button>
+    </form>
+  </div>
+
+  <!-- Global Chat Box -->
+  <div id="chatBox" class="hidden popup-box border border-red-500 flex flex-col">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="text-xl font-bold">Global Chat</h3>
+      <button onclick="closeAllPopups()" class="text-red-400 hover:text-red-600 text-2xl">&times;</button>
+    </div>
+    <div id="chatMessages" class="flex-1 overflow-auto bg-gray-800 rounded p-2 mb-2 text-sm">
+      <p class="text-gray-400">[User1]: Hello everyone!</p>
+    </div>
+    <input type="text" placeholder="Type your message..." class="w-full mb-2 p-2 rounded bg-gray-700">
+    <button onclick="sendMessage()" class="bg-red-600 hover:bg-red-700 p-2 rounded">Send</button>
+  </div>
+
+  <script>
+    // Initialize AOS animations
+    AOS.init({
+      duration: 800,
+      easing: 'ease-in-out'
+    });
+
+    // API configuration
+    const API_BASE_URL = 'http://localhost:3000/api';
+    let currentUser = null;
+    let adminVerified = false;
+    let newsPosts = [];
+    let listings = [];
+    let chatMessages = [];
+
+    // DOM Content Loaded
+    document.addEventListener('DOMContentLoaded', async function() {
+      await checkLoginStatus();
+      setupEventListeners();
+      await loadInitialData();
+    });
+
+    // Data loading functions
+    async function loadInitialData() {
+      try {
+        // Load news
+        const newsResponse = await fetch(`${API_BASE_URL}/news`);
+        const newsData = await newsResponse.json();
+        newsPosts = newsData.news;
+        renderNewsPosts();
+        
+        // Load listings
+        const listingsResponse = await fetch(`${API_BASE_URL}/listings`);
+        const listingsData = await listingsResponse.json();
+        listings = listingsData.listings;
+        renderListings();
+        
+        // Load chat messages
+        const chatResponse = await fetch(`${API_BASE_URL}/chat`);
+        const chatData = await chatResponse.json();
+        chatMessages = chatData.messages;
+        renderChatMessages();
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      }
+    }
+
+    // Render functions
+    function renderNewsPosts() {
+      const newsFeed = document.getElementById('newsFeed');
+      newsFeed.innerHTML = '';
+      
+      newsPosts.forEach(post => {
+        const newsItem = document.createElement('div');
+        newsItem.className = 'bg-gray-800 p-6 rounded-lg shadow-lg';
+        newsItem.dataset.id = post.id;
+        newsItem.innerHTML = `
+          <h3 class="text-2xl font-bold mb-2">${post.title}</h3>
+          <p class="text-gray-300">${post.content.replace(/\n/g, '<br>')}</p>
+          <p class="text-gray-500 text-sm mt-2">Posted on ${new Date(post.date).toLocaleString()}</p>
+        `;
+        newsFeed.appendChild(newsItem);
+      });
+    }
+
+    function renderListings() {
+      const listingsContainer = document.getElementById('listingsContainer');
+      listingsContainer.innerHTML = '';
+      
+      listings.forEach(listing => {
+        const listingElement = document.createElement('div');
+        listingElement.className = 'bg-gray-800 p-4 rounded shadow mb-2';
+        listingElement.dataset.id = listing.id;
+        
+        let imageDisplay = '';
+        if (listing.itemImage) {
+          imageDisplay = `
+            <div class="file-preview mt-2">
+              <p class="text-gray-400 text-sm">Image:</p>
+              <img src="${listing.itemImage}" class="mt-1 max-h-32 rounded">
+            </div>
+          `;
+        }
+        
+        listingElement.innerHTML = `
+          <h3 class="text-xl font-semibold">${listing.itemName}</h3>
+          <p class="text-gray-300">Location: ${listing.itemLocation}</p>
+          <p class="text-gray-300">Price: $${parseFloat(listing.itemPrice).toFixed(2)}</p>
+          ${imageDisplay}
+          <p class="text-gray-500 text-xs mt-2">Listing ID: ${listing.id}</p>
+        `;
+        
+        listingsContainer.appendChild(listingElement);
+      });
+    }
+
+    function renderChatMessages() {
+      const chatMessagesContainer = document.getElementById('chatMessages');
+      chatMessagesContainer.innerHTML = '';
+      
+      chatMessages.forEach(msg => {
+        const msgElement = document.createElement('p');
+        msgElement.className = 'text-gray-300';
+        msgElement.dataset.id = msg.id;
+        msgElement.textContent = `[${msg.username}]: ${msg.message}`;
+        chatMessagesContainer.appendChild(msgElement);
+      });
+      
+      chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    }
+
+    // Authentication functions
+    async function checkLoginStatus() {
+      const user = localStorage.getItem('currentUser');
+      if (user) {
+        currentUser = JSON.parse(user);
+        updateUIForLoggedInUser();
+      }
+    }
+
+    function updateUIForLoggedInUser() {
+      document.getElementById('authButton').classList.add('hidden');
+      document.getElementById('logoutButton').classList.remove('hidden');
+      document.getElementById('profileImage').classList.remove('hidden');
+      const avatar = currentUser.avatar || 'https://i.imgur.com/6VBx3io.png';
+      document.getElementById('profileImage').src = avatar;
+      document.getElementById('currentProfileImage').src = avatar;
+    }
+
+    function updateUIForLoggedOutUser() {
+      document.getElementById('authButton').classList.remove('hidden');
+      document.getElementById('logoutButton').classList.add('hidden');
+      document.getElementById('profileImage').classList.add('hidden');
+    }
+
+    function setupEventListeners() {
+      document.getElementById('adminButton').addEventListener('click', toggleAdminPanel);
+      document.getElementById('authButton').addEventListener('click', toggleAuthPanel);
+      document.getElementById('logoutButton').addEventListener('click', logout);
+      document.getElementById('aboutButton').addEventListener('click', toggleAboutBox);
+      document.getElementById('creditsButton').addEventListener('click', toggleCreditsBox);
+      document.getElementById('marketplaceButton').addEventListener('click', toggleMarketplaceBox);
+      document.getElementById('listingsButton').addEventListener('click', toggleListings);
+      document.getElementById('chatButton').addEventListener('click', toggleChat);
+      
+      // Add enter key listener for chat
+      document.querySelector('#chatBox input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          sendMessage();
+        }
+      });
+    }
+
+    // Toggle functions
+    function toggleAdminPanel() {
+      if (adminVerified) {
+        closeAllPopups();
+        document.getElementById('adminSection').classList.toggle('hidden');
+        updateAccountsList();
+      } else {
+        showAdminKeyModal();
+      }
+    }
+
+    function toggleProfileSettings() {
+      if (!currentUser) return;
+      closeAllPopups();
+      document.getElementById('profileSettingsBox').classList.toggle('hidden');
+      document.getElementById('currentProfileImage').src = currentUser.avatar || 'https://i.imgur.com/6VBx3io.png';
+      document.getElementById('newUsername').value = currentUser.username;
+    }
+
+    function toggleAuthPanel() {
+      closeAllPopups();
+      document.getElementById('authPanel').classList.toggle('hidden');
+      showLogin();
+    }
+
+    function toggleAboutBox() {
+      closeAllPopups();
+      document.getElementById('aboutBox').classList.toggle('hidden');
+    }
+
+    function toggleCreditsBox() {
+      closeAllPopups();
+      document.getElementById('creditsBox').classList.toggle('hidden');
+    }
+
+    function toggleMarketplaceBox() {
+      closeAllPopups();
+      document.getElementById('marketplaceBox').classList.toggle('hidden');
+    }
+
+    function toggleListings() {
+      closeAllPopups();
+      document.getElementById('listingsBox').classList.toggle('hidden');
+    }
+
+    function toggleChat() {
+      closeAllPopups();
+      document.getElementById('chatBox').classList.toggle('hidden');
+    }
+
+    function closeAllPopups() {
+      document.querySelectorAll('.popup-box').forEach(el => {
+        el.classList.add('hidden');
+      });
+    }
+
+    function showLogin() {
+      document.getElementById('loginTab').classList.remove('hidden');
+      document.getElementById('signupTab').classList.add('hidden');
+    }
+
+    function showSignup() {
+      document.getElementById('loginTab').classList.add('hidden');
+      document.getElementById('signupTab').classList.remove('hidden');
+    }
+
+    // Admin functions
+    function showAdminKeyModal() {
+      document.getElementById('adminKeyModal').style.display = 'flex';
+      document.getElementById('adminKeyInput').focus();
+    }
+
+    function closeAdminKeyModal() {
+      document.getElementById('adminKeyModal').style.display = 'none';
+      document.getElementById('adminKeyInput').value = '';
+      document.getElementById('adminKeyError').classList.add('hidden');
+    }
+
+    async function verifyAdminKey() {
+      const enteredKey = document.getElementById('adminKeyInput').value;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: enteredKey })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.verified) {
+          throw new Error('Invalid key');
+        }
+        
+        adminVerified = true;
+        closeAdminKeyModal();
+        document.getElementById('adminSection').classList.remove('hidden');
+        await updateAccountsList();
+      } catch (error) {
+        document.getElementById('adminKeyError').classList.remove('hidden');
+      }
+    }
+
+    async function updateAccountsList() {
+      if (!adminVerified) return;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/users`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        
+        const accountsList = document.getElementById('accountsList');
+        accountsList.innerHTML = '';
+        
+        if (data.users.length === 0) {
+          accountsList.innerHTML = '<p class="text-gray-400 text-center">No accounts found</p>';
+          return;
+        }
+        
+        data.users.forEach(user => {
+          const accountItem = document.createElement('div');
+          accountItem.className = 'account-item';
+          
+          let statusClasses = '';
+          if (user.banned) statusClasses = 'banned-account';
+          if (user.disabled) statusClasses = 'disabled-account';
+          
+          accountItem.innerHTML = `
+            <img src="${user.avatar || 'https://i.imgur.com/6VBx3io.png'}" class="account-avatar">
+            <span class="${statusClasses}">${user.username}</span>
+            ${user.banned ? '<span class="text-red-500 ml-2">(Banned)</span>' : ''}
+            ${user.disabled ? '<span class="text-gray-400 ml-2">(Disabled)</span>' : ''}
+          `;
+          accountsList.appendChild(accountItem);
+        });
+      } catch (error) {
+        console.error('Failed to load accounts:', error);
+      }
+    }
+
+    // User authentication functions
+    async function login() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      
+      if (!username || !password) {
+        alert('Please enter both username and password');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Login failed');
+        }
+        
+        currentUser = data.user;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUIForLoggedInUser();
+        closeAllPopups();
+        alert('Login successful!');
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function signup() {
+      const username = document.getElementById('signupUsername').value.trim();
+      const password = document.getElementById('signupPassword').value.trim();
+      const avatarFile = document.getElementById('signupAvatar').files[0];
+      
+      if (!username || !password) {
+        alert('Please enter both username and password');
+        return;
+      }
+
+      try {
+        let avatar = 'https://i.imgur.com/6VBx3io.png';
+        if (avatarFile) {
+          avatar = await readFileAsDataURL(avatarFile);
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, avatar })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Signup failed');
+        }
+        
+        currentUser = data.user;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUIForLoggedInUser();
+        closeAllPopups();
+        alert('Signup successful!');
+        showLogin();
+        document.getElementById('signupUsername').value = '';
+        document.getElementById('signupPassword').value = '';
+        document.getElementById('signupAvatar').value = '';
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function updateProfile() {
+      if (!currentUser) return;
+      
+      const newUsername = document.getElementById('newUsername').value.trim();
+      const currentPassword = document.getElementById('currentPassword').value.trim();
+      const newPassword = document.getElementById('newPassword').value.trim();
+      const newAvatarFile = document.getElementById('newProfileImage').files[0];
+      
+      try {
+        let newAvatar = null;
+        if (newAvatarFile) {
+          newAvatar = await readFileAsDataURL(newAvatarFile);
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/update-profile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentUsername: currentUser.username,
+            newUsername,
+            currentPassword,
+            newPassword,
+            newAvatar
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Profile update failed');
+        }
+        
+        currentUser = data.user;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUIForLoggedInUser();
+        alert('Profile updated successfully!');
+        closeAllPopups();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem('currentUser');
+      updateUIForLoggedOutUser();
+      alert('Logged out successfully');
+    }
+
+    // News functions
+    async function postNews() {
+      const title = document.getElementById('newsTitle').value.trim();
+      const content = document.getElementById('newsContent').value.trim();
+      
+      if (!title || !content) {
+        alert('Please fill all fields');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/news`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to post news');
+        }
+        
+        newsPosts.unshift(data.post);
+        renderNewsPosts();
+        updateNewsDropdown();
+        document.getElementById('newsTitle').value = '';
+        document.getElementById('newsContent').value = '';
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    function updateNewsDropdown() {
+      const dropdown = document.getElementById('newsToDelete');
+      dropdown.innerHTML = '<option value="">Select news to delete</option>';
+      newsPosts.forEach((post) => {
+        const option = document.createElement('option');
+        option.value = post.id;
+        option.textContent = post.title;
+        dropdown.appendChild(option);
+      });
+    }
+
+    async function deleteNews() {
+      const dropdown = document.getElementById('newsToDelete');
+      const selectedId = dropdown.value;
+      
+      if (selectedId === '') {
+        alert('Please select a news item to delete');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/news/${selectedId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete news');
+        }
+        
+        newsPosts = newsPosts.filter(post => post.id !== selectedId);
+        renderNewsPosts();
+        updateNewsDropdown();
+        alert('News item deleted');
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    // Marketplace functions
+    async function addListing() {
+      const itemName = document.getElementById('itemName').value.trim();
+      const itemLocation = document.getElementById('itemLocation').value.trim();
+      const itemPrice = document.getElementById('itemPrice').value.trim();
+      const itemFile = document.getElementById('itemFile').files[0];
+      
+      if (!itemName || !itemLocation || !itemPrice) {
+        alert('Please fill out all required fields');
+        return;
+      }
+      
+      if (isNaN(itemPrice) || parseFloat(itemPrice) <= 0) {
+        alert('Please enter a valid price');
+        return;
+      }
+
+      try {
+        let itemImage = null;
+        if (itemFile) {
+          itemImage = await readFileAsDataURL(itemFile);
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/listings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            itemName,
+            itemLocation,
+            itemPrice,
+            itemImage
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to add listing');
+        }
+        
+        listings.unshift(data.listing);
+        renderListings();
+        document.getElementById('marketplaceForm').reset();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function clearAllListings() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/listings`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to clear listings');
+        }
+        
+        listings = [];
+        renderListings();
+        alert('All listings have been cleared');
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function clearSpecificListing() {
+      const listingId = document.getElementById('listingIdToDelete').value;
+      if (!listingId) {
+        alert('Please enter a listing ID to delete');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/listings/${listingId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete listing');
+        }
+        
+        listings = listings.filter(listing => listing.id !== listingId);
+        renderListings();
+        alert(`Listing #${listingId} has been deleted`);
+        document.getElementById('listingIdToDelete').value = '';
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    // Chat functions
+    async function sendMessage() {
+      const input = document.querySelector('#chatBox input');
+      const message = input.value.trim();
+      if (!message) return;
+      
+      const username = currentUser ? currentUser.username : 'Guest';
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, message })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to send message');
+        }
+        
+        chatMessages.push(data.message);
+        renderChatMessages();
+        input.value = '';
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function deleteMessage() {
+      const messageId = document.getElementById('deleteMessageId').value;
+      if (!messageId) return alert('Please enter a message ID');
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/chat/${messageId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete message');
+        }
+        
+        chatMessages = chatMessages.filter(msg => msg.id !== messageId);
+        renderChatMessages();
+        alert(`Message ${messageId} has been deleted`);
+        document.getElementById('deleteMessageId').value = '';
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    // Admin account management functions
+    async function banAccount() {
+      const username = document.getElementById('banUsername').value.trim();
+      if (!username) return alert('Please enter a username');
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/ban`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Ban failed');
+        }
+        
+        if (currentUser && currentUser.username === username) {
+          logout();
+        }
+        
+        alert(`Account ${username} has been banned`);
+        document.getElementById('banUsername').value = '';
+        await updateAccountsList();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function unbanAccount() {
+      const username = document.getElementById('unbanUsername').value.trim();
+      if (!username) return alert('Please enter a username');
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/unban`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Unban failed');
+        }
+        
+        alert(`Account ${username} has been unbanned`);
+        document.getElementById('unbanUsername').value = '';
+        await updateAccountsList();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function disableAccount() {
+      const username = document.getElementById('disableUsername').value.trim();
+      if (!username) return alert('Please enter a username');
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/disable`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Disable failed');
+        }
+        
+        if (currentUser && currentUser.username === username) {
+          logout();
+        }
+        
+        alert(`Account ${username} has been disabled`);
+        document.getElementById('disableUsername').value = '';
+        await updateAccountsList();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function enableAccount() {
+      const username = document.getElementById('enableUsername').value.trim();
+      if (!username) return alert('Please enter a username');
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/enable`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Enable failed');
+        }
+        
+        alert(`Account ${username} has been enabled`);
+        document.getElementById('enableUsername').value = '';
+        await updateAccountsList();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+  </script>
+</body>
+</html>
