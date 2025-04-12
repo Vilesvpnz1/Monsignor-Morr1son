@@ -1030,34 +1030,47 @@
     }
 
     // Chat functions
-    async function sendMessage() {
-      const input = document.querySelector('#chatBox input');
-      const message = input.value.trim();
-      if (!message) return;
-      
-      const username = currentUser ? currentUser.username : 'Guest';
-      
-      try {
-        const response = await fetch(`${API_BASE_URL}/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, message })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error('Failed to send message');
-        }
-        
-        chatMessages.push(data.message);
-        renderChatMessages();
-        input.value = '';
-      } catch (error) {
-        alert(error.message);
-      }
+async function sendMessage() {
+  const input = document.querySelector('#chatBox input');
+  const message = input.value.trim();
+  if (!message) return;
+  
+  // Check if user is logged in
+  if (!currentUser) {
+    alert('Please login to send messages!');
+    return;
+  }
+
+  try {
+    // Get the JWT token from where you stored it during login
+    const token = localStorage.getItem('token') || '';
+    
+    const response = await fetch(`${API_BASE_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`  // THIS IS THE CRUCIAL ADDITION
+      },
+      body: JSON.stringify({
+        username: currentUser.username,
+        message: message
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send message');
     }
 
+    const data = await response.json();
+    chatMessages.push(data);
+    renderChatMessages();
+    input.value = '';  // Clear input after sending
+  } catch (error) {
+    console.error('Chat error:', error);
+    alert(error.message);
+  }
+}
     async function deleteMessage() {
       const messageId = document.getElementById('deleteMessageId').value;
       if (!messageId) return alert('Please enter a message ID');
