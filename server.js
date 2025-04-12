@@ -10,17 +10,17 @@ const path = require('path');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000; // Flexible port for Render
+const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY || 'a3f8d9e72c1b06f5e4d9876543210abcdef0123456789fedcba9876543210';
-const ADMIN_KEY = process.env.ADMIN_KEY || 'Panelkey1';
+const ADMIN_KEY = process.env.ADMIN_KEY || 'Panelkey1'; // Keeping your original admin key
 
 // Enhanced CORS configuration
 app.use(cors({
   origin: [
-    'https://monsignor-morr1son.onrender.com', // Your Render frontend URL
-    'http://localhost:3000' // For local development
+    'https://monsignor-morr1son.onrender.com',
+    'http://localhost:3000'
   ],
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
@@ -190,9 +190,98 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Profile update
+app.post('/api/update-profile', authenticate, async (req, res) => {
+  const { currentUsername, newUsername, currentPassword, newPassword, newAvatar } = req.body;
+  
+  try {
+    // Verify current password if changing sensitive data
+    if (newUsername || newPassword) {
+      const user = await new Promise((resolve) => {
+        db.get('SELECT * FROM users WHERE username = ?', [currentUsername], (err, row) => resolve(row));
+      });
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+    }
+
+    // Process new avatar if provided
+    let avatarPath = null;
+    if (newAvatar && newAvatar.startsWith('data:image')) {
+      avatarPath = saveImage(newAvatar, newUsername || currentUsername);
+    }
+
+    // Update user data
+    let updateQuery = 'UPDATE users SET ';
+    const updateParams = [];
+    
+    if (newUsername) {
+      updateQuery += 'username = ?, ';
+      updateParams.push(newUsername);
+    }
+    
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      updateQuery += 'password = ?, ';
+      updateParams.push(hashedPassword);
+    }
+    
+    if (avatarPath) {
+      updateQuery += 'avatar = ?, ';
+      updateParams.push(avatarPath);
+    }
+    
+    // Remove trailing comma and space
+    updateQuery = updateQuery.slice(0, -2);
+    updateQuery += ' WHERE username = ?';
+    updateParams.push(currentUsername);
+
+    await new Promise((resolve, reject) => {
+      db.run(updateQuery, updateParams, function(err) {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+
+    // Get updated user data
+    const updatedUser = await new Promise((resolve) => {
+      db.get(
+        'SELECT id, username, avatar FROM users WHERE username = ?',
+        [newUsername || currentUsername],
+        (err, row) => resolve(row)
+      );
+    });
+
+    // Generate new token if username changed
+    let token;
+    if (newUsername) {
+      token = jwt.sign(
+        { id: updatedUser.id, username: updatedUser.username },
+        SECRET_KEY,
+        { expiresIn: '1h' }
+      );
+    }
+
+    res.json({ 
+      success: true, 
+      user: updatedUser,
+      token: token || undefined
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ error: 'Server error during profile update' });
+  }
+});
+
 // Token verification endpoint
 app.get('/api/verify-token', authenticate, (req, res) => {
-  res.json({ valid: true });
+  res.json({ valid: true, user: req.user });
 });
 
 // ======================
@@ -244,6 +333,32 @@ app.post('/api/admin/unban', authenticate, (req, res) => {
   );
 });
 
+// Disable a user
+app.post('/api/admin/disable', authenticate, (req, res) => {
+  const { username } = req.body;
+  db.run(
+    'UPDATE users SET disabled = 1 WHERE username = ?',
+    [username],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
+
+// Enable a user
+app.post('/api/admin/enable', authenticate, (req, res) => {
+  const { username } = req.body;
+  db.run(
+    'UPDATE users SET disabled = 0 WHERE username = ?',
+    [username],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
+
 // ======================
 // NEWS ENDPOINTS
 // ======================
@@ -270,6 +385,69 @@ app.post('/api/news', authenticate, (req, res) => {
   );
 });
 
+app.delete('/api/news/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  db.run(
+    'DELETE FROM news WHERE id = ?',
+    [id],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
+
+// ======================
+// LISTINGS ENDPOINTS
+// ======================
+app.get('/api/listings', (req, res) => {
+  db.all('SELECT * FROM listings ORDER BY date DESC', [], (err, listings) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ listings });
+  });
+});
+
+app.post('/api/listings', authenticate, (req, res) => {
+  const { itemName, itemLocation, itemPrice, itemImage } = req.body;
+  
+  if (!itemName || !itemLocation || !itemPrice) {
+    return res.status(400).json({ error: 'Item name, location and price are required' });
+  }
+
+  let imagePath = null;
+  if (itemImage && itemImage.startsWith('data:image')) {
+    imagePath = saveImage(itemImage, `listing-${Date.now()}`);
+  }
+
+  db.run(
+    'INSERT INTO listings (itemName, itemLocation, itemPrice, itemImage) VALUES (?, ?, ?, ?)',
+    [itemName, itemLocation, itemPrice, imagePath],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID });
+    }
+  );
+});
+
+app.delete('/api/listings', authenticate, (req, res) => {
+  db.run('DELETE FROM listings', [], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.delete('/api/listings/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  db.run(
+    'DELETE FROM listings WHERE id = ?',
+    [id],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
+
 // ======================
 // CHAT ENDPOINTS
 // ======================
@@ -288,6 +466,18 @@ app.post('/api/chat', authenticate, (req, res) => {
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID });
+    }
+  );
+});
+
+app.delete('/api/chat/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  db.run(
+    'DELETE FROM chat_messages WHERE id = ?',
+    [id],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
     }
   );
 });
@@ -311,10 +501,17 @@ app.listen(PORT, () => {
   console.log('Available endpoints:');
   console.log('- POST /api/signup');
   console.log('- POST /api/login');
+  console.log('- POST /api/update-profile');
   console.log('- GET  /api/news');
   console.log('- POST /api/news (protected)');
+  console.log('- DELETE /api/news/:id (protected)');
   console.log('- GET  /api/admin/users (protected)');
   console.log('- POST /api/admin/verify (admin key check)');
   console.log('- GET  /api/chat');
   console.log('- POST /api/chat (protected)');
+  console.log('- DELETE /api/chat/:id (protected)');
+  console.log('- GET  /api/listings');
+  console.log('- POST /api/listings (protected)');
+  console.log('- DELETE /api/listings (protected)');
+  console.log('- DELETE /api/listings/:id (protected)');
 });
